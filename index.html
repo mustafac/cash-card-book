@@ -1,0 +1,637 @@
+<!doctype html>
+<html lang="en"><head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+<meta name="theme-color" content="#EDF1F0" media="(prefers-color-scheme: light)">
+<meta name="theme-color" content="#0C1413" media="(prefers-color-scheme: dark)">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-title" content="Card Book">
+<meta name="apple-mobile-web-app-status-bar-style" content="default">
+<meta name="color-scheme" content="light dark">
+<link rel="manifest" href="manifest.webmanifest">
+<link rel="apple-touch-icon" href="apple-touch-icon.png">
+<link rel="icon" type="image/png" href="icon-192.png">
+<title>Cash and Card Book</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Bricolage+Grotesque:opsz,wght@12..96,600;12..96,700&family=DM+Sans:opsz,wght@9..40,400;9..40,500;9..40,600&display=swap">
+<style>
+/* Layout: one phone-width column, fixed bottom bar with a centred Add button, sheets slide up for entry. */
+:root{
+  --bg:#EDF1F0; --surface:#FFFFFF; --surface2:#E3EAE8; --ink:#11201C; --muted:#586964; --line:#D2DCD9;
+  --accent:#0B6E66; --accent-ink:#FFFFFF; --in:#1D7A4B; --out:#B3382E; --visa:#3F4BA8; --rupay:#B25F0A; --warn:#A8700F;
+  --shadow:0 1px 2px rgba(17,32,28,.06),0 6px 18px rgba(17,32,28,.07);
+  --f-display:"Bricolage Grotesque","DM Sans",system-ui,-apple-system,"Segoe UI",sans-serif;
+  --f-body:"DM Sans",system-ui,-apple-system,"Segoe UI",sans-serif;
+}
+@media (prefers-color-scheme:dark){:root:not([data-theme="light"]){
+  --bg:#0C1413; --surface:#142120; --surface2:#1C2D2A; --ink:#E5EFEC; --muted:#8CA29C; --line:#263835;
+  --accent:#3FC1B3; --accent-ink:#06211E; --in:#4FCB8A; --out:#F0877C; --visa:#9AA6FF; --rupay:#F0A24F; --warn:#E3B04B;
+  --shadow:0 1px 2px rgba(0,0,0,.4),0 6px 18px rgba(0,0,0,.35); color-scheme:dark}}
+:root[data-theme="dark"]{
+  --bg:#0C1413; --surface:#142120; --surface2:#1C2D2A; --ink:#E5EFEC; --muted:#8CA29C; --line:#263835;
+  --accent:#3FC1B3; --accent-ink:#06211E; --in:#4FCB8A; --out:#F0877C; --visa:#9AA6FF; --rupay:#F0A24F; --warn:#E3B04B;
+  --shadow:0 1px 2px rgba(0,0,0,.4),0 6px 18px rgba(0,0,0,.35); color-scheme:dark}
+
+*{box-sizing:border-box}
+html,body{min-height:100%}
+body{background:var(--bg);color:var(--ink);font-family:var(--f-body);font-size:15px;line-height:1.4;-webkit-text-size-adjust:100%}
+button,input,select,textarea{font:inherit;color:inherit}
+button{cursor:pointer;border:0;background:none;padding:0}
+:focus-visible{outline:2px solid var(--accent);outline-offset:2px}
+.num{font-variant-numeric:tabular-nums;font-feature-settings:"tnum"}
+
+.app{max-width:560px;margin:0 auto;padding-inline:16px;padding-block:0 112px}
+.top{position:sticky;top:env(safe-area-inset-top,0px);z-index:20;background:var(--bg);display:flex;align-items:center;justify-content:space-between;gap:12px;padding-block:14px 8px}
+.brand{font-family:var(--f-display);font-weight:700;font-size:20px;letter-spacing:-.01em}
+.brand small{display:block;font-family:var(--f-body);font-weight:500;font-size:12px;color:var(--muted);letter-spacing:0}
+.sync{font-size:12px;color:var(--muted);display:flex;align-items:center;gap:6px}
+.sync i{width:7px;height:7px;border-radius:50%;background:var(--in);display:inline-block}
+.sync.off i{background:var(--warn)}
+
+.filters{display:flex;flex-direction:column;gap:8px;padding-bottom:12px}
+.chips{display:flex;gap:6px;overflow-x:auto;scrollbar-width:none;padding-bottom:2px}
+.chips::-webkit-scrollbar{display:none}
+.chip{flex:none;padding:7px 14px;border-radius:99px;background:var(--surface);border:1px solid var(--line);font-weight:500;font-size:14px;color:var(--muted)}
+.chip[aria-pressed="true"]{background:var(--ink);border-color:var(--ink);color:var(--bg)}
+.frow{display:flex;gap:8px;align-items:center;flex-wrap:wrap}
+.sel{flex:1;min-width:150px;appearance:none;-webkit-appearance:none;background:var(--surface) url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='8' viewBox='0 0 12 8'%3E%3Cpath d='M1 1l5 5 5-5' fill='none' stroke='%23888' stroke-width='1.6'/%3E%3C/svg%3E") no-repeat right 12px center;border:1px solid var(--line);border-radius:10px;padding:9px 32px 9px 12px;font-weight:500}
+.rangetxt{font-size:12.5px;color:var(--muted)}
+
+.card{background:var(--surface);border-radius:16px;box-shadow:var(--shadow);padding:16px}
+.card + .card, .stack > * + *{margin-top:12px}
+.lbl{font-size:12px;font-weight:600;letter-spacing:.06em;text-transform:uppercase;color:var(--muted)}
+.big{font-family:var(--f-display);font-weight:700;letter-spacing:-.02em;line-height:1.05}
+.h2{font-family:var(--f-display);font-weight:600;font-size:16px;margin:0}
+.sub{font-size:12.5px;color:var(--muted)}
+.pos{color:var(--in)} .neg{color:var(--out)}
+
+.hero{display:grid;grid-template-columns:1fr 1fr;gap:12px}
+.hero .card{padding:14px}
+.hero .big{font-size:26px;margin-top:6px;word-break:break-word}
+.meter{height:8px;border-radius:99px;background:var(--surface2);overflow:hidden;margin-top:10px}
+.meter b{display:block;height:100%;border-radius:99px;background:var(--in)}
+.meter b.mid{background:var(--warn)} .meter b.hi{background:var(--out)}
+.mrow{display:flex;justify-content:space-between;gap:8px;margin-top:8px;font-size:13px}
+
+.strip{display:grid;grid-template-columns:repeat(3,1fr);gap:8px}
+.strip > div{min-width:0}
+.strip .big{font-size:19px;margin-top:4px}
+
+.bars{display:flex;flex-direction:column;gap:10px;margin-top:12px}
+.bar .top2{display:flex;justify-content:space-between;gap:8px;font-size:13.5px}
+.bar .top2 span:first-child{min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.track{height:8px;border-radius:99px;background:var(--surface2);margin-top:5px;overflow:hidden}
+.track b{display:block;height:100%;border-radius:99px;background:var(--accent)}
+.split{display:flex;height:12px;border-radius:99px;overflow:hidden;margin-top:12px;background:var(--surface2)}
+.split b{display:block;height:100%}
+.legend{display:flex;gap:14px;flex-wrap:wrap;margin-top:8px;font-size:13px}
+.dot{display:inline-block;width:9px;height:9px;border-radius:3px;margin-right:6px}
+.rhythm{display:grid;grid-template-columns:repeat(7,1fr);gap:6px;align-items:end;height:96px;margin-top:12px}
+.rhythm.four{grid-template-columns:repeat(4,1fr)}
+.rcol{display:flex;flex-direction:column;justify-content:flex-end;align-items:center;gap:4px;height:100%;min-width:0}
+.rcol i{display:block;width:100%;max-width:30px;border-radius:6px 6px 2px 2px;background:var(--accent);min-height:2px}
+.rcol span{font-size:11.5px;color:var(--muted)}
+svg.chart{display:block;width:100%;height:auto}
+svg.chart text{fill:var(--muted);font-family:var(--f-body);font-size:10.5px}
+
+.day{display:flex;justify-content:space-between;align-items:baseline;margin:18px 2px 6px;font-size:12.5px;color:var(--muted);font-weight:600}
+.list{background:var(--surface);border-radius:16px;box-shadow:var(--shadow);overflow:hidden}
+.row{display:flex;align-items:center;gap:12px;width:100%;text-align:left;padding:12px 14px;border-top:1px solid var(--line)}
+.row:first-child{border-top:0}
+.row .mid{flex:1;min-width:0}
+.row .t{font-weight:500;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.row .s{font-size:12.5px;color:var(--muted);display:flex;gap:6px;flex-wrap:wrap;align-items:center;margin-top:1px}
+.row .amt{font-weight:600;white-space:nowrap}
+.pill{display:inline-block;font-size:11px;font-weight:600;border-radius:99px;padding:1px 8px;border:1px solid currentColor}
+.pill.Cash{color:var(--accent)} .pill.VISA{color:var(--visa)} .pill.RuPay{color:var(--rupay)}
+.search{width:100%;background:var(--surface);border:1px solid var(--line);border-radius:10px;padding:10px 12px}
+.tools{display:flex;gap:8px}
+.btn{display:inline-flex;align-items:center;justify-content:center;gap:8px;padding:10px 16px;border-radius:10px;font-weight:600;background:var(--surface);border:1px solid var(--line)}
+.btn.primary{background:var(--accent);border-color:var(--accent);color:var(--accent-ink)}
+.btn.danger{color:var(--out);border-color:var(--out)}
+.btn.block{width:100%}
+.btn svg{width:18px;height:18px}
+
+.cardtile{border-left:5px solid var(--visa)}
+.cardtile.RuPay{border-left-color:var(--rupay)}
+.cardtile .big{font-size:28px;margin:6px 0 2px}
+.kv{display:grid;grid-template-columns:1fr auto;gap:6px 12px;margin-top:10px;font-size:13.5px}
+.kv span:nth-child(odd){color:var(--muted)} .kv span:nth-child(even){text-align:right}
+.dates{display:grid;grid-template-columns:repeat(3,1fr);gap:8px;margin-top:12px}
+.dates div{background:var(--surface2);border-radius:12px;padding:10px;min-width:0}
+.dates b{display:block;font-family:var(--f-display);font-size:17px;margin-top:2px}
+.empty{text-align:center;color:var(--muted);padding:28px 12px}
+.empty b{display:block;color:var(--ink);font-family:var(--f-display);font-size:17px;margin-bottom:4px}
+.note{font-size:12.5px;color:var(--muted);margin-top:10px}
+
+.bar-nav{position:fixed;left:0;right:0;bottom:0;z-index:30;background:var(--surface);border-top:1px solid var(--line);padding:6px 16px calc(8px + env(safe-area-inset-bottom,0px))}
+.bar-nav nav{max-width:560px;margin:0 auto;display:grid;grid-template-columns:1fr 76px 1fr;align-items:center}
+.tab{display:flex;flex-direction:column;align-items:center;gap:2px;padding:6px;font-size:12px;font-weight:500;color:var(--muted)}
+.tab svg{width:24px;height:24px}
+.tab[aria-current="page"]{color:var(--accent);font-weight:600}
+.fab{justify-self:center;width:58px;height:58px;border-radius:50%;background:var(--accent);color:var(--accent-ink);display:grid;place-items:center;margin-top:-26px;box-shadow:0 6px 18px rgba(11,110,102,.4)}
+.fab svg{width:28px;height:28px}
+.tabs3{display:contents}
+
+.scrim{position:fixed;inset:0;z-index:40;background:rgba(5,12,10,.5);display:flex;align-items:flex-end;justify-content:center}
+.sheet{width:100%;max-width:560px;max-height:92%;overflow-y:auto;background:var(--surface);border-radius:20px 20px 0 0;padding:18px 16px calc(18px + env(safe-area-inset-bottom,0px));animation:up .22s ease-out}
+@keyframes up{from{transform:translateY(40px);opacity:.4}to{transform:none;opacity:1}}
+@media (prefers-reduced-motion:reduce){.sheet{animation:none}}
+.sheet h3{margin:0 0 12px;font-family:var(--f-display);font-size:20px}
+.seg{display:grid;grid-auto-flow:column;grid-auto-columns:1fr;background:var(--surface2);border-radius:12px;padding:3px;gap:3px}
+.seg button{padding:9px 6px;border-radius:9px;font-weight:600;font-size:14px;color:var(--muted)}
+.seg button[aria-pressed="true"]{background:var(--surface);color:var(--ink);box-shadow:0 1px 3px rgba(0,0,0,.15)}
+.seg.flow button[aria-pressed="true"][data-v="in"]{color:var(--in)}
+.seg.flow button[aria-pressed="true"][data-v="out"]{color:var(--out)}
+.fld{display:flex;flex-direction:column;gap:5px;margin-top:12px;min-width:0}
+.fld label{font-size:12.5px;font-weight:600;color:var(--muted)}
+.inp{width:100%;background:var(--bg);border:1px solid var(--line);border-radius:10px;padding:11px 12px;min-width:0}
+.amtin{font-family:var(--f-display);font-size:30px;font-weight:700;padding:10px 12px}
+.two{display:grid;grid-template-columns:1fr 1fr;gap:10px}
+.acts{display:flex;gap:10px;margin-top:18px}
+.acts .btn{flex:1}
+.toast{position:fixed;left:50%;bottom:calc(92px + env(safe-area-inset-bottom,0px));transform:translateX(-50%);z-index:60;background:var(--ink);color:var(--bg);padding:10px 16px;border-radius:99px;font-weight:500;font-size:14px;max-width:90%}
+.banner{background:var(--surface2);border-radius:12px;padding:10px 12px;font-size:13px;color:var(--muted);margin-bottom:12px}
+@media (max-width:380px){.hero .big{font-size:22px}.strip .big{font-size:16px}}
+
+html{-webkit-tap-highlight-color:transparent}
+body{margin:0;overscroll-behavior-y:none}
+[hidden]{display:none!important}
+.inp[type=datetime-local],.inp[type=date]{min-height:44px}
+input,select,textarea{font-size:16px}
+</style>
+</head><body>
+
+<div class="app">
+  <header class="top">
+    <div class="brand">Cash and Card Book<small id="today"></small></div>
+    <div class="sync" id="sync"><i></i><span>Connecting</span></div>
+  </header>
+  <div id="banner"></div>
+  <main id="view"></main>
+</div>
+
+<div class="bar-nav"><nav aria-label="Main">
+  <button class="tab" data-act="tab" data-v="home" aria-label="Home"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M4 11l8-7 8 7v9a1 1 0 0 1-1 1h-4v-6H9v6H5a1 1 0 0 1-1-1z"/></svg>Home</button>
+  <button class="fab" data-act="add" aria-label="Add entry"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round"><path d="M12 5v14M5 12h14"/></svg></button>
+  <div style="display:grid;grid-template-columns:1fr 1fr">
+    <button class="tab" data-act="tab" data-v="ledger" aria-label="Ledger"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M8 6h12M8 12h12M8 18h12M4 6h.01M4 12h.01M4 18h.01"/></svg>Ledger</button>
+    <button class="tab" data-act="tab" data-v="cards" aria-label="Cards"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="5" width="18" height="14" rx="2.5"/><path d="M3 10h18M7 15h3"/></svg>Cards</button>
+  </div>
+</nav></div>
+<div id="layer"></div>
+<div id="toast" class="toast" hidden></div>
+
+<script>
+(function(){
+"use strict";
+var $=function(s,r){return (r||document).querySelector(s)};
+var esc=function(s){return String(s==null?"":s).replace(/[&<>"']/g,function(c){return {"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"}[c]})};
+var DEF={limit:0,openVISA:0,openRuPay:0,statementDay:12,payDay:13,dueDay:2,cashOpening:0};
+var BASE_CATS=["Food","Drinks","Fuel","Groceries","Personal Care","Health","Family","Community","Employee Salary","Subscriptions","Taxes","Travel","Shopping","Utilities","Rent","Raw Material","Packaging","Marketing","Transport","Other","Sales","Personal Withdrawal","Refund"];
+var MONTHS=["Jan","Feb","Mar","Apr","May","Jun","Jul","Aug","Sep","Oct","Nov","Dec"];
+var DAYS=["Mon","Tue","Wed","Thu","Fri","Sat","Sun"];
+var db=null, canWrite=true, SUB=[];
+var TX=new Map(), PAY=new Map(), S=Object.assign({},DEF), settingsExists=false;
+var loaded={tx:false,pay:false,set:false}, dead=false;
+var UI={tab:"home",acct:"all",period:"all",from:"",to:"",q:"",flow:"all",cat:"all"};
+var FORM=null, PFORM=null, delArmed=false, delTimer=null;
+
+/* ---------- formatting ---------- */
+function inr(n,dec){var d=dec==null?2:dec;var v=Math.abs(n).toLocaleString("en-IN",{minimumFractionDigits:d,maximumFractionDigits:d});return (n<0?"-":"")+"₹"+v}
+function abbr(n){if(n>=1e5)return (n/1e5).toFixed(n%1e5?1:0).replace(/\.0$/,"")+"L";if(n>=1e3)return (n/1e3).toFixed(n%1e3?1:0).replace(/\.0$/,"")+"k";return String(Math.round(n))}
+function p2(n){return (n<10?"0":"")+n}
+function ymd(d){return d.getFullYear()+"-"+p2(d.getMonth()+1)+"-"+p2(d.getDate())}
+function nowLocal(){var d=new Date();return ymd(d)+"T"+p2(d.getHours())+":"+p2(d.getMinutes())}
+function dlabel(k){var d=new Date(k+"T00:00");return DAYS[(d.getDay()+6)%7]+", "+d.getDate()+" "+MONTHS[d.getMonth()]+" "+d.getFullYear()}
+function tlabel(ts){var h=+ts.slice(11,13),m=ts.slice(14,16);var ap=h>=12?"PM":"AM";var hh=h%12||12;return hh+":"+m+" "+ap}
+function sdate(d){return d.getDate()+" "+MONTHS[d.getMonth()]+" "+d.getFullYear()}
+
+/* ---------- periods ---------- */
+var PERIODS=[["all","All time"],["month","This month"],["lastmonth","Last month"],["quarter","This quarter"],["last6","Last 6 months"],["fy","This financial year"],["year","This calendar year"],["custom","Custom dates"]];
+function range(){
+  var n=new Date(),y=n.getFullYear(),m=n.getMonth(),a=null,b=null;
+  switch(UI.period){
+    case "month":a=new Date(y,m,1);b=new Date(y,m+1,0);break;
+    case "lastmonth":a=new Date(y,m-1,1);b=new Date(y,m,0);break;
+    case "quarter":var q=Math.floor(m/3)*3;a=new Date(y,q,1);b=new Date(y,q+3,0);break;
+    case "last6":a=new Date(y,m-5,1);b=new Date(y,m+1,0);break;
+    case "fy":var sy=m>=3?y:y-1;a=new Date(sy,3,1);b=new Date(sy+1,3,0);break;
+    case "year":a=new Date(y,0,1);b=new Date(y,12,0);break;
+    case "custom":return [UI.from||null,UI.to||null];
+  }
+  return [a?ymd(a):null,b?ymd(b):null];
+}
+function rangeText(){
+  var r=range();if(!r[0]&&!r[1])return "Every entry on record";
+  var f=function(k){return k?sdate(new Date(k+"T00:00")):"start"};
+  return f(r[0])+" to "+(r[1]?sdate(new Date(r[1]+"T00:00")):"latest");
+}
+function filtered(){
+  var r=range(),a=UI.acct;
+  return Array.from(TX.values()).filter(function(t){
+    var d=t.ts.slice(0,10);
+    if(r[0]&&d<r[0])return false; if(r[1]&&d>r[1])return false;
+    if(a!=="all"&&t.account!==a)return false;
+    return true;
+  });
+}
+
+/* ---------- balances ---------- */
+function sumBy(arr,fn){return arr.reduce(function(s,t){return s+fn(t)},0)}
+function all(){return Array.from(TX.values())}
+function cashBalance(){var c=all().filter(function(t){return t.account==="Cash"});return S.cashOpening+sumBy(c,function(t){return t.flow==="in"?t.amount:-t.amount})}
+function cardOut(name){
+  var open=name==="VISA"?S.openVISA:S.openRuPay;
+  var c=all().filter(function(t){return t.account===name});
+  var paid=sumBy(Array.from(PAY.values()).filter(function(p){return p.card===name}),function(p){return p.amount});
+  return open+sumBy(c,function(t){return t.flow==="out"?t.amount:-t.amount})-paid;
+}
+function nextBilling(){
+  var t=new Date(),today=new Date(t.getFullYear(),t.getMonth(),t.getDate());
+  var st=new Date(today.getFullYear(),today.getMonth(),S.statementDay);
+  if(st<today)st=new Date(today.getFullYear(),today.getMonth()+1,S.statementDay);
+  var pay=new Date(st.getFullYear(),st.getMonth(),S.payDay);
+  if(pay<st)pay=new Date(st.getFullYear(),st.getMonth()+1,S.payDay);
+  var due=new Date(st.getFullYear(),st.getMonth()+1,S.dueDay);
+  return {st:st,pay:pay,due:due,days:Math.round((due-today)/864e5)};
+}
+
+/* ---------- render ---------- */
+function filterBar(){
+  var accts=[["all","All"],["Cash","Cash"],["VISA","VISA"],["RuPay","RuPay"]];
+  var h='<div class="filters"><div class="chips" role="group" aria-label="Account">'+accts.map(function(a){return '<button class="chip" data-act="acct" data-v="'+a[0]+'" aria-pressed="'+(UI.acct===a[0])+'">'+a[1]+'</button>'}).join("")+'</div>';
+  h+='<div class="frow"><select class="sel" id="period" aria-label="Period">'+PERIODS.map(function(p){return '<option value="'+p[0]+'"'+(UI.period===p[0]?" selected":"")+'>'+p[1]+'</option>'}).join("")+'</select></div>';
+  if(UI.period==="custom")h+='<div class="two"><input class="inp" type="date" id="pfrom" aria-label="From" value="'+esc(UI.from)+'"><input class="inp" type="date" id="pto" aria-label="To" value="'+esc(UI.to)+'"></div>';
+  h+='<div class="rangetxt">'+esc(rangeText())+'</div></div>';
+  return h;
+}
+function render(){
+  var v=$("#view");
+  $("#today").textContent=sdate(new Date());
+  var ts=document.querySelectorAll(".tab[data-act=tab]");
+  ts.forEach(function(b){if(b.dataset.v===UI.tab)b.setAttribute("aria-current","page");else b.removeAttribute("aria-current")});
+  $(".fab").hidden=!canWrite;
+  var ready=loaded.tx&&loaded.pay&&loaded.set;
+  var qf=document.activeElement&&document.activeElement.id==="q"?{s:document.activeElement.selectionStart}:null;
+  if(!db){v.innerHTML='<div class="empty"><b>This browser is blocking storage</b>Open the app in Safari and allow website data, then reload.</div>';return}
+  if(!ready){v.innerHTML='<div class="empty"><b>Loading your book</b>Fetching entries and card details.</div>';return}
+  if(UI.tab==="home")v.innerHTML=homeView();
+  else if(UI.tab==="ledger")v.innerHTML=ledgerView();
+  else v.innerHTML=cardsView();
+  if(qf){var q=$("#q");if(q){q.focus();try{q.setSelectionRange(qf.s,qf.s)}catch(e){}}}
+}
+
+function homeView(){
+  var cash=cashBalance(),vo=cardOut("VISA"),ro=cardOut("RuPay"),out=vo+ro;
+  var avail=S.limit>0?S.limit-out:null,use=S.limit>0?out/S.limit:0;
+  var f=filtered(),inn=sumBy(f,function(t){return t.flow==="in"?t.amount:0}),ex=sumBy(f,function(t){return t.flow==="out"?t.amount:0});
+  var h='<div class="stack">';
+  h+='<div class="hero"><div class="card"><div class="lbl">Cash in hand</div><div class="big num '+(cash<0?"neg":"")+'">'+inr(cash)+'</div><div class="sub" style="margin-top:6px">All time</div></div>';
+  h+='<div class="card"><div class="lbl">Card outstanding</div><div class="big num">'+inr(out)+'</div><div class="sub" style="margin-top:6px">VISA + RuPay</div></div></div>';
+  h+='<div class="card"><div style="display:flex;justify-content:space-between;gap:8px;align-items:baseline"><div class="lbl">Available credit</div><div class="sub">Shared limit '+(S.limit>0?inr(S.limit,0):"not set")+'</div></div>';
+  if(S.limit>0){h+='<div class="big num" style="font-size:24px;margin-top:6px">'+inr(avail)+'</div><div class="meter" role="img" aria-label="'+(use*100).toFixed(1)+' percent of limit used"><b class="'+(use>=.7?"hi":use>=.3?"mid":"")+'" style="width:'+Math.min(100,use*100).toFixed(1)+'%"></b></div><div class="mrow"><span class="sub">'+(use*100).toFixed(1)+'% used</span><span class="sub">Net position '+inr(cash-out)+'</span></div>'}
+  else h+='<div class="note">Add your combined credit limit in Cards to see what is left.</div>';
+  h+='</div>';
+  if(!all().length){h+='<div class="card empty"><b>Your book is empty</b>Tap + to add your first entry, or open Ledger, then Data, to restore a backup file.</div>'}
+  h+=filterBar();
+  h+='<div class="card"><div class="strip"><div><div class="lbl">Money in</div><div class="big num pos">'+inr(inn,0)+'</div></div><div><div class="lbl">Money out</div><div class="big num neg">'+inr(ex,0)+'</div></div><div><div class="lbl">Net</div><div class="big num '+(inn-ex<0?"neg":"")+'">'+inr(inn-ex,0)+'</div></div></div><div class="sub" style="margin-top:10px">'+f.length+' entries in this view</div></div>';
+  if(!f.length){h+='<div class="card empty"><b>Nothing in this view</b>Change the account or period, or tap + to add an entry.</div>'}
+  else{
+    h+=monthChart(f)+categoryCard(f)+splitCard(f)+rhythmCard(f);
+  }
+  h+='</div>';return h;
+}
+
+function niceMax(x){if(x<=0)return 1;var p=Math.pow(10,Math.floor(Math.log10(x))),n=x/p;var m=n<=1?1:n<=2?2:n<=5?5:10;return m*p}
+function monthChart(f){
+  var by={};f.forEach(function(t){var k=t.ts.slice(0,7);var o=by[k]||(by[k]={i:0,o:0});if(t.flow==="in")o.i+=t.amount;else o.o+=t.amount});
+  var keys=Object.keys(by).sort().slice(-6);if(!keys.length)return "";
+  var mx=0;keys.forEach(function(k){mx=Math.max(mx,by[k].i,by[k].o)});var top=niceMax(mx);
+  var W=340,H=190,L=38,R=8,T=12,B=26,pw=W-L-R,ph=H-T-B,slot=pw/keys.length,bw=Math.min(22,slot/2-4);
+  var y=function(v){return T+ph-ph*v/top};
+  var s='<svg class="chart" viewBox="0 0 '+W+' '+H+'" role="img" aria-label="Money in and money out by month">';
+  [0,.5,1].forEach(function(g){var yy=y(top*g);s+='<line x1="'+L+'" x2="'+(W-R)+'" y1="'+yy+'" y2="'+yy+'" stroke="var(--line)" stroke-width="1"/><text x="'+(L-6)+'" y="'+(yy+3.5)+'" text-anchor="end">'+abbr(top*g)+'</text>'});
+  keys.forEach(function(k,i){
+    var cx=L+slot*i+slot/2,o=by[k],mon=MONTHS[+k.slice(5,7)-1]+" "+k.slice(2,4);
+    var hi=ph*o.i/top,ho=ph*o.o/top;
+    s+='<rect x="'+(cx-bw-1)+'" y="'+(T+ph-hi)+'" width="'+bw+'" height="'+Math.max(hi,o.i>0?2:0)+'" rx="3" fill="var(--in)"><title>'+mon+' money in '+inr(o.i)+'</title></rect>';
+    s+='<rect x="'+(cx+1)+'" y="'+(T+ph-ho)+'" width="'+bw+'" height="'+Math.max(ho,o.o>0?2:0)+'" rx="3" fill="var(--out)"><title>'+mon+' money out '+inr(o.o)+'</title></rect>';
+    s+='<text x="'+cx+'" y="'+(H-8)+'" text-anchor="middle">'+mon+'</text>';
+  });
+  s+='</svg>';
+  return '<div class="card"><h2 class="h2">Month by month</h2>'+s+'<div class="legend"><span><i class="dot" style="background:var(--in)"></i>Money in</span><span><i class="dot" style="background:var(--out)"></i>Money out</span></div></div>';
+}
+function categoryCard(f){
+  var by={},tot=0;f.forEach(function(t){if(t.flow==="out"){by[t.cat]=(by[t.cat]||0)+t.amount;tot+=t.amount}});
+  var keys=Object.keys(by).sort(function(a,b){return by[b]-by[a]});if(!keys.length)return "";
+  var top=keys.slice(0,6),rest=keys.slice(6).reduce(function(s,k){return s+by[k]},0);
+  var mx=by[top[0]];
+  var h='<div class="card"><h2 class="h2">Where the money goes</h2><div class="bars">';
+  top.forEach(function(k){h+='<div class="bar"><div class="top2"><span>'+esc(k)+'</span><span class="num">'+inr(by[k],0)+' <span class="sub">'+(by[k]/tot*100).toFixed(0)+'%</span></span></div><div class="track"><b style="width:'+(by[k]/mx*100).toFixed(1)+'%"></b></div></div>'});
+  if(rest>0)h+='<div class="bar"><div class="top2"><span>Others</span><span class="num">'+inr(rest,0)+' <span class="sub">'+(rest/tot*100).toFixed(0)+'%</span></span></div><div class="track"><b style="width:'+(rest/mx*100).toFixed(1)+'%;background:var(--muted)"></b></div></div>';
+  return h+'</div></div>';
+}
+function splitCard(f){
+  if(UI.acct!=="all")return "";
+  var c=0,v=0,r=0;f.forEach(function(t){if(t.flow!=="out")return;if(t.account==="Cash")c+=t.amount;else if(t.account==="VISA")v+=t.amount;else r+=t.amount});
+  var tot=c+v+r;if(!tot)return "";
+  var seg=function(x,col){return x>0?'<b style="width:'+(x/tot*100)+'%;background:'+col+'"></b>':""};
+  var lg=function(n,x,col){return '<span><i class="dot" style="background:'+col+'"></i>'+n+' <span class="num">'+inr(x,0)+'</span></span>'};
+  return '<div class="card"><h2 class="h2">Cash or card</h2><div class="split" role="img" aria-label="Spending split by account">'+seg(c,"var(--accent)")+seg(v,"var(--visa)")+seg(r,"var(--rupay)")+'</div><div class="legend">'+lg("Cash",c,"var(--accent)")+lg("VISA",v,"var(--visa)")+lg("RuPay",r,"var(--rupay)")+'</div></div>';
+}
+function rhythmCard(f){
+  var wd=[0,0,0,0,0,0,0],td=[0,0,0,0],any=false;
+  f.forEach(function(t){if(t.flow!=="out")return;any=true;var d=new Date(t.ts.slice(0,10)+"T00:00");wd[(d.getDay()+6)%7]+=t.amount;var h=+t.ts.slice(11,13);td[(h>=21||h<5)?3:h<12?0:h<17?1:2]+=t.amount});
+  if(!any)return "";
+  var cols=function(a,labels,cls){var m=Math.max.apply(null,a)||1;return '<div class="rhythm '+cls+'">'+a.map(function(x,i){return '<div class="rcol" title="'+labels[i]+' '+inr(x)+'"><i style="height:'+Math.max(2,x/m*70)+'px;opacity:'+(x?1:.25)+'"></i><span>'+labels[i]+'</span></div>'}).join("")+'</div>'};
+  return '<div class="card"><h2 class="h2">When you spend</h2><div class="sub" style="margin-top:2px">By day of week</div>'+cols(wd,DAYS,"")+'<div class="sub" style="margin-top:14px">By time of day</div>'+cols(td,["Morning","Afternoon","Evening","Night"],"four")+'</div>';
+}
+
+function ledgerView(){
+  var h='<div class="stack">'+filterBar();
+  h+='<div class="tools"><input class="search" id="q" type="search" placeholder="Search description, category, note" value="'+esc(UI.q)+'" aria-label="Search entries"></div>';
+  var cats=Array.from(new Set(all().map(function(t){return t.cat}))).sort();
+  h+='<div class="two"><select class="sel" id="fflow" aria-label="Money in or out" style="min-width:0"><option value="all">In and out</option><option value="in"'+(UI.flow==="in"?" selected":"")+'>Money in</option><option value="out"'+(UI.flow==="out"?" selected":"")+'>Money out</option></select><select class="sel" id="fcat" aria-label="Category" style="min-width:0"><option value="all">All categories</option>'+cats.map(function(c){return '<option'+(UI.cat===c?" selected":"")+'>'+esc(c)+'</option>'}).join("")+'</select></div>';
+  h+='<div id="ledgerList">'+ledgerList()+'</div></div>';
+  return h;
+}
+function ledgerRows(){
+  var q=UI.q.trim().toLowerCase();
+  return filtered().filter(function(t){
+    if(UI.flow!=="all"&&t.flow!==UI.flow)return false;
+    if(UI.cat!=="all"&&t.cat!==UI.cat)return false;
+    if(q&&(t.desc+" "+t.cat+" "+(t.note||"")+" "+t.account).toLowerCase().indexOf(q)<0)return false;
+    return true;
+  }).sort(function(a,b){return a.ts<b.ts?1:a.ts>b.ts?-1:0});
+}
+function ledgerList(){
+  var rows=ledgerRows();
+  var inn=sumBy(rows,function(t){return t.flow==="in"?t.amount:0}),ex=sumBy(rows,function(t){return t.flow==="out"?t.amount:0});
+  var h='<div style="display:flex;justify-content:space-between;align-items:center;gap:8px;margin-top:2px"><div class="sub num">'+rows.length+' entries · in '+inr(inn,0)+' · out '+inr(ex,0)+'</div><button class="btn" data-act="data" style="padding:7px 12px;font-size:13px"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round"><path d="M12 4v11M7 11l5 5 5-5M5 20h14"/></svg>Data</button></div>';
+  if(!rows.length)return h+'<div class="card empty" style="margin-top:12px"><b>No entries match</b>Try clearing the search or filters.</div>';
+  var cur="",open=false;
+  rows.forEach(function(t){
+    var d=t.ts.slice(0,10);
+    if(d!==cur){
+      if(open)h+='</div>';
+      var day=rows.filter(function(x){return x.ts.slice(0,10)===d});
+      var net=sumBy(day,function(x){return x.flow==="in"?x.amount:-x.amount});
+      h+='<div class="day"><span>'+dlabel(d)+'</span><span class="num">'+(net>=0?"+":"")+inr(net,0)+'</span></div><div class="list">';
+      cur=d;open=true;
+    }
+    h+='<button class="row" data-act="edit" data-id="'+esc(t.id)+'"><div class="mid"><div class="t">'+esc(t.desc||t.cat)+'</div><div class="s"><span class="pill '+t.account+'">'+t.account+'</span><span>'+esc(t.cat)+'</span><span>'+tlabel(t.ts)+'</span>'+(t.note?'<span>· '+esc(t.note)+'</span>':"")+'</div></div><div class="amt num '+(t.flow==="in"?"pos":"neg")+'">'+(t.flow==="in"?"+":"-")+inr(t.amount)+'</div></button>';
+  });
+  if(open)h+='</div>';
+  return h;
+}
+
+function cardsView(){
+  var vo=cardOut("VISA"),ro=cardOut("RuPay"),out=vo+ro,nb=nextBilling();
+  var use=S.limit>0?out/S.limit:0;
+  var h='<div class="stack">';
+  if(!settingsExists)h+='<div class="banner">Card details are not set yet. Tap Card settings to enter your limit and opening balances.</div>';
+  h+='<div class="card"><div style="display:flex;justify-content:space-between;align-items:center;gap:8px"><h2 class="h2">Next bill</h2><button class="btn" data-act="settings" style="padding:7px 12px;font-size:13px">Card settings</button></div>';
+  h+='<div class="dates"><div><div class="sub">Statement</div><b class="num">'+nb.st.getDate()+" "+MONTHS[nb.st.getMonth()]+'</b></div><div><div class="sub">Pay on</div><b class="num">'+nb.pay.getDate()+" "+MONTHS[nb.pay.getMonth()]+'</b></div><div><div class="sub">Due</div><b class="num">'+nb.due.getDate()+" "+MONTHS[nb.due.getMonth()]+'</b></div></div>';
+  h+='<div class="note">'+(nb.days>=0?nb.days+" days until the due date.":"Due date has passed.")+' Statement on the '+S.statementDay+'th, payment on the '+S.payDay+'th, due on the '+S.dueDay+'nd of the next month.</div></div>';
+  h+='<div class="card"><div class="lbl">Shared limit</div>';
+  if(S.limit>0){h+='<div class="big num" style="font-size:26px;margin-top:6px">'+inr(S.limit-out)+' <span class="sub" style="font-family:var(--f-body);font-weight:500">left of '+inr(S.limit,0)+'</span></div><div class="meter" role="img" aria-label="'+(use*100).toFixed(1)+' percent used"><b class="'+(use>=.7?"hi":use>=.3?"mid":"")+'" style="width:'+Math.min(100,use*100).toFixed(1)+'%"></b></div><div class="mrow"><span class="sub">'+(use*100).toFixed(1)+'% used</span><span class="sub">Green under 30%, red from 70%</span></div>'}
+  else h+='<div class="note">Enter the combined limit in Card settings.</div>';
+  h+='</div>';
+  ["VISA","RuPay"].forEach(function(n){
+    var bal=n==="VISA"?vo:ro,open=n==="VISA"?S.openVISA:S.openRuPay;
+    var c=all().filter(function(t){return t.account===n});
+    var sp=sumBy(c,function(t){return t.flow==="out"?t.amount:0}),rf=sumBy(c,function(t){return t.flow==="in"?t.amount:0});
+    var paid=sumBy(Array.from(PAY.values()).filter(function(p){return p.card===n}),function(p){return p.amount});
+    h+='<div class="card cardtile '+n+'"><div class="lbl">'+(n==="VISA"?"VISA":"RuPay UPI Card")+'</div><div class="big num">'+inr(bal)+'</div><div class="sub">Outstanding now</div><div class="kv"><span>Opening outstanding</span><span class="num">'+inr(open)+'</span><span>Spends ('+c.filter(function(t){return t.flow==="out"}).length+')</span><span class="num">'+inr(sp)+'</span><span>Refunds</span><span class="num">'+inr(rf)+'</span><span>Payments made</span><span class="num">'+inr(paid)+'</span></div></div>';
+  });
+  var pays=Array.from(PAY.values()).sort(function(a,b){return a.date<b.date?1:-1});
+  h+='<div class="card"><div style="display:flex;justify-content:space-between;align-items:center;gap:8px"><h2 class="h2">Bill payments</h2>'+(canWrite?'<button class="btn primary" data-act="addpay" style="padding:7px 12px;font-size:13px">Log payment</button>':"")+'</div>';
+  if(!pays.length)h+='<div class="note">No payments logged. When you pay a card bill, log it here so the outstanding amount goes down.</div>';
+  else{h+='<div class="list" style="box-shadow:none;margin-top:10px;background:var(--bg)">';pays.forEach(function(p){h+='<button class="row" data-act="editpay" data-id="'+esc(p.id)+'"><div class="mid"><div class="t">'+(p.card==="VISA"?"VISA":"RuPay UPI Card")+'</div><div class="s"><span>'+sdate(new Date(p.date+"T00:00"))+'</span><span>'+esc(p.mode||"")+'</span>'+(p.note?'<span>· '+esc(p.note)+'</span>':"")+'</div></div><div class="amt num pos">'+inr(p.amount)+'</div></button>'});h+='</div>'}
+  h+='</div></div>';return h;
+}
+
+/* ---------- sheets ---------- */
+function openLayer(html){var l=$("#layer");l.innerHTML='<div class="scrim" data-act="scrim"><div class="sheet" role="dialog" aria-modal="true">'+html+'</div></div>'}
+function closeLayer(){$("#layer").innerHTML="";FORM=null;PFORM=null;delArmed=false;clearTimeout(delTimer)}
+function toast(m){var t=$("#toast");t.textContent=m;t.hidden=false;clearTimeout(toast.t);toast.t=setTimeout(function(){t.hidden=true},2400)}
+function catList(){var s=new Set(BASE_CATS);all().forEach(function(t){s.add(t.cat)});return Array.from(s)}
+
+function entrySheet(id){
+  var t=id?TX.get(id):null;
+  FORM=t?{id:id,account:t.account,flow:t.flow}:{id:null,account:UI.acct==="VISA"||UI.acct==="RuPay"||UI.acct==="Cash"?UI.acct:"Cash",flow:"out"};
+  var seg=function(arr,key){return arr.map(function(a){return '<button type="button" data-act="seg" data-k="'+key+'" data-v="'+a[0]+'" aria-pressed="'+(FORM[key]===a[0])+'">'+a[1]+'</button>'}).join("")};
+  var h='<h3>'+(t?"Edit entry":"New entry")+'</h3>';
+  h+='<div class="seg" role="group" aria-label="Account">'+seg([["Cash","Cash"],["VISA","VISA"],["RuPay","RuPay"]],"account")+'</div>';
+  h+='<div class="seg flow" style="margin-top:10px" role="group" aria-label="Direction" id="flowseg">'+flowSeg()+'</div>';
+  h+='<div class="fld"><label for="f-amt">Amount</label><input class="inp amtin num" id="f-amt" inputmode="decimal" autocomplete="off" placeholder="0.00" value="'+(t?t.amount:"")+'"></div>';
+  h+='<div class="fld"><label for="f-desc">Description</label><input class="inp" id="f-desc" list="dl-desc" autocomplete="off" placeholder="What was it for" value="'+esc(t?t.desc:"")+'"><datalist id="dl-desc">'+Array.from(new Set(all().map(function(x){return x.desc}))).map(function(d){return '<option value="'+esc(d)+'">'}).join("")+'</datalist></div>';
+  h+='<div class="two"><div class="fld"><label for="f-cat">Category</label><input class="inp" id="f-cat" list="dl-cat" autocomplete="off" placeholder="Choose or type" value="'+esc(t?t.cat:"")+'"><datalist id="dl-cat">'+catList().map(function(c){return '<option value="'+esc(c)+'">'}).join("")+'</datalist></div>';
+  h+='<div class="fld"><label for="f-dt">Date and time</label><input class="inp" id="f-dt" type="datetime-local" value="'+(t?t.ts:nowLocal())+'"></div></div>';
+  h+='<div class="fld"><label for="f-note">Note (optional)</label><input class="inp" id="f-note" autocomplete="off" value="'+esc(t?t.note:"")+'"></div>';
+  h+='<div class="acts">'+(t?'<button class="btn danger" data-act="del" id="delbtn">Delete</button>':'<button class="btn" data-act="close">Cancel</button>')+'<button class="btn primary" data-act="save">Save</button></div>';
+  openLayer(h);
+  if(!t)setTimeout(function(){var a=$("#f-amt");if(a)a.focus()},120);
+}
+function flowSeg(){
+  var card=FORM.account!=="Cash";
+  var o=[["out",card?"Spend":"Money out"],["in",card?"Refund":"Money in"]];
+  return o.map(function(a){return '<button type="button" data-act="seg" data-k="flow" data-v="'+a[0]+'" aria-pressed="'+(FORM.flow===a[0])+'">'+a[1]+'</button>'}).join("");
+}
+async function saveTx(){
+  var amt=parseFloat(String($("#f-amt").value).replace(/,/g,""));
+  var desc=$("#f-desc").value.trim(),cat=$("#f-cat").value.trim(),dt=$("#f-dt").value,note=$("#f-note").value.trim();
+  if(!(amt>0)){toast("Enter an amount greater than zero");$("#f-amt").focus();return}
+  if(!dt){toast("Pick a date and time");return}
+  if(!cat)cat=FORM.flow==="in"&&FORM.account==="Cash"?"Sales":"Other";
+  if(!desc)desc=cat;
+  var data={ts:dt.slice(0,16),account:FORM.account,flow:FORM.flow,desc:desc,cat:cat,amount:Math.round(amt*100)/100,note:note};
+  try{
+    var ref=FORM.id?db.doc("tx/"+FORM.id):db.collection("tx").doc();
+    await ref.set(data);closeLayer();toast("Saved");
+  }catch(e){toast("Could not save: "+(e&&e.message||"try again"))}
+}
+async function deleteTx(){
+  if(!delArmed){delArmed=true;var b=$("#delbtn");b.textContent="Tap again to delete";delTimer=setTimeout(function(){delArmed=false;var x=$("#delbtn");if(x)x.textContent="Delete"},3000);return}
+  try{await db.doc("tx/"+FORM.id).delete();closeLayer();toast("Deleted")}catch(e){toast("Could not delete")}
+}
+
+function paySheet(id){
+  var p=id?PAY.get(id):null;
+  PFORM=p?{id:id,card:p.card}:{id:null,card:"VISA"};
+  var h='<h3>'+(p?"Edit payment":"Log card payment")+'</h3>';
+  h+='<div class="seg" role="group" aria-label="Card">'+["VISA","RuPay"].map(function(c){return '<button type="button" data-act="pseg" data-v="'+c+'" aria-pressed="'+(PFORM.card===c)+'">'+(c==="VISA"?"VISA":"RuPay UPI Card")+'</button>'}).join("")+'</div>';
+  h+='<div class="fld"><label for="p-amt">Amount paid</label><input class="inp amtin num" id="p-amt" inputmode="decimal" placeholder="0.00" value="'+(p?p.amount:"")+'"></div>';
+  h+='<div class="two"><div class="fld"><label for="p-date">Payment date</label><input class="inp" id="p-date" type="date" value="'+(p?p.date:ymd(new Date()))+'"></div><div class="fld"><label for="p-mode">Paid by</label><select class="inp" id="p-mode">'+["UPI","Net banking","Auto-debit","Cheque","Other"].map(function(m){return '<option'+(p&&p.mode===m?" selected":"")+'>'+m+'</option>'}).join("")+'</select></div></div>';
+  h+='<div class="fld"><label for="p-note">Note (optional)</label><input class="inp" id="p-note" value="'+esc(p?p.note:"")+'"></div>';
+  h+='<div class="acts">'+(p?'<button class="btn danger" data-act="pdel" id="delbtn">Delete</button>':'<button class="btn" data-act="close">Cancel</button>')+'<button class="btn primary" data-act="psave">Save</button></div>';
+  openLayer(h);
+}
+async function savePay(){
+  var amt=parseFloat(String($("#p-amt").value).replace(/,/g,""));
+  if(!(amt>0)){toast("Enter the amount paid");return}
+  var d=$("#p-date").value;if(!d){toast("Pick the payment date");return}
+  var data={card:PFORM.card,amount:Math.round(amt*100)/100,date:d,mode:$("#p-mode").value,note:$("#p-note").value.trim()};
+  try{var ref=PFORM.id?db.doc("payments/"+PFORM.id):db.collection("payments").doc();await ref.set(data);closeLayer();toast("Payment logged")}
+  catch(e){toast("Could not save: "+(e&&e.message||"try again"))}
+}
+async function delPay(){
+  if(!delArmed){delArmed=true;var b=$("#delbtn");b.textContent="Tap again to delete";delTimer=setTimeout(function(){delArmed=false;var x=$("#delbtn");if(x)x.textContent="Delete"},3000);return}
+  try{await db.doc("payments/"+PFORM.id).delete();closeLayer();toast("Deleted")}catch(e){toast("Could not delete")}
+}
+
+function settingsSheet(){
+  var f=function(id,label,val,hint){return '<div class="fld"><label for="'+id+'">'+label+'</label><input class="inp num" id="'+id+'" inputmode="decimal" value="'+val+'">'+(hint?'<div class="sub">'+hint+'</div>':"")+'</div>'};
+  var h='<h3>Card settings</h3>'+f("s-limit","Combined credit limit (VISA and RuPay share it)",S.limit);
+  h+='<div class="two">'+f("s-ov","VISA opening outstanding",S.openVISA)+f("s-or","RuPay opening outstanding",S.openRuPay)+'</div><div class="sub" style="margin-top:6px">Opening outstanding is what you owed before the first entry in this book. Use a minus sign if the card was in credit.</div>';
+  h+='<div class="two">'+f("s-st","Statement day",S.statementDay)+f("s-pd","Payment day",S.payDay)+'</div>'+f("s-dd","Due day (of the following month)",S.dueDay);
+  h+=f("s-cash","Opening cash balance",S.cashOpening,"Leave at 0 if your first cash entry already is the opening balance.");
+  h+='<div class="acts"><button class="btn" data-act="close">Cancel</button><button class="btn primary" data-act="ssave">Save</button></div>';
+  openLayer(h);
+}
+async function saveSettings(){
+  var n=function(id){var v=parseFloat(String($(id).value).replace(/,/g,""));return isNaN(v)?0:v};
+  var d={limit:Math.max(0,n("#s-limit")),openVISA:n("#s-ov"),openRuPay:n("#s-or"),statementDay:Math.min(31,Math.max(1,Math.round(n("#s-st")))),payDay:Math.min(31,Math.max(1,Math.round(n("#s-pd")))),dueDay:Math.min(31,Math.max(1,Math.round(n("#s-dd")))),cashOpening:n("#s-cash")};
+  try{await db.doc("settings/main").set(d);closeLayer();toast("Settings saved")}catch(e){toast("Could not save settings")}
+}
+
+/* ---------- export, backup, restore ---------- */
+var PENDING=null;
+async function saveFile(name,text,mime){
+  var blob=new Blob([text],{type:mime});
+  try{
+    var f=new File([blob],name,{type:mime});
+    if(navigator.canShare&&navigator.canShare({files:[f]})){await navigator.share({files:[f],title:name});return "shared"}
+  }catch(e){if(e&&e.name==="AbortError")return "cancelled"}
+  var u=URL.createObjectURL(blob),a=document.createElement("a");a.href=u;a.download=name;document.body.appendChild(a);a.click();a.remove();
+  setTimeout(function(){URL.revokeObjectURL(u)},4000);return "downloaded";
+}
+async function exportCsv(){
+  var q=function(s){s=String(s==null?"":s);return /[",\n]/.test(s)?'"'+s.replace(/"/g,'""')+'"':s};
+  var rows=all().sort(function(a,b){return a.ts<b.ts?-1:1});
+  var csv=["Date,Time,Account,Type,Description,Category,Amount,Note"].concat(rows.map(function(t){
+    var ty=t.account==="Cash"?(t.flow==="in"?"Money In":"Money Out"):(t.flow==="in"?"Refund":"Spend");
+    return [t.ts.slice(0,10),t.ts.slice(11,16),t.account,ty,t.desc,t.cat,t.amount.toFixed(2),t.note||""].map(q).join(",")})).join("\n");
+  try{var r=await saveFile("cash-and-card-book-"+ymd(new Date())+".csv","\uFEFF"+csv,"text/csv");if(r!=="cancelled")toast("Export ready")}
+  catch(e){toast("Could not export")}
+}
+async function backupFile(){
+  var out={app:"cash-card-book",version:1,exported:new Date().toISOString(),settings:settingsExists?S:null,
+    tx:all().map(function(t){return t}),payments:Array.from(PAY.values())};
+  try{var r=await saveFile("cash-and-card-book-backup-"+ymd(new Date())+".json",JSON.stringify(out),"application/json");if(r!=="cancelled")toast("Backup saved")}
+  catch(e){toast("Could not save the backup")}
+}
+function dataSheet(){
+  var h='<h3>Data and backup</h3><div class="note" style="margin-top:0">Your entries are stored on this phone only. Save a backup file now and then and keep it in iCloud Drive or send it to yourself.</div>';
+  h+='<div class="stack" style="margin-top:14px"><button class="btn block" data-act="export">Export CSV for Excel</button><button class="btn block" data-act="backup">Save backup file</button><label class="btn block" for="restorefile">Restore from backup file</label><input type="file" id="restorefile" accept=".json,application/json" hidden></div><div id="restoreinfo"></div>';
+  h+='<div class="acts"><button class="btn" data-act="close">Close</button></div>';
+  openLayer(h);
+}
+function readRestore(file){
+  if(!file)return;
+  var r=new FileReader();
+  r.onload=function(){
+    try{
+      var o=JSON.parse(r.result);
+      if(!o||o.app!=="cash-card-book"||!Array.isArray(o.tx))throw new Error("bad");
+      PENDING=o;
+      $("#restoreinfo").innerHTML='<div class="banner" style="margin-top:14px">This backup has '+o.tx.length+' entries and '+(o.payments||[]).length+' payments. Restoring replaces everything now on this phone.</div><button class="btn danger block" data-act="restoreok">Replace everything</button>';
+    }catch(e){PENDING=null;$("#restoreinfo").innerHTML='<div class="banner" style="margin-top:14px">That file is not a backup from this app.</div>'}
+  };
+  r.readAsText(file);
+}
+async function applyRestore(){
+  var o=PENDING;if(!o)return;
+  try{
+    var put=function(n,items){return idbTx(n,"readwrite",function(s){s.clear();items.forEach(function(it){s.put(it)})})};
+    var tx=o.tx.map(function(t){var d=Object.assign({},t);var id=d.id||newId();delete d.id;return {id:id,d:d}});
+    var pay=(o.payments||[]).map(function(t){var d=Object.assign({},t);var id=d.id||newId();delete d.id;return {id:id,d:d}});
+    await put("tx",tx);await put("payments",pay);await put("settings",o.settings?[{id:"main",d:o.settings}]:[]);
+    ["tx","payments","settings"].forEach(function(n){mem[n].clear()});
+    tx.forEach(function(r){mem.tx.set(r.id,r.d)});pay.forEach(function(r){mem.payments.set(r.id,r.d)});if(o.settings)mem.settings.set("main",o.settings);
+    PENDING=null;["tx","payments","settings"].forEach(emit);closeLayer();toast("Backup restored");
+  }catch(e){toast("Could not restore the backup")}
+}
+
+/* ---------- events ---------- */
+document.addEventListener("click",function(ev){
+  var el=ev.target.closest("[data-act]");if(!el)return;
+  var a=el.dataset.act,v=el.dataset.v;
+  if(a==="scrim"){if(ev.target===el)closeLayer();return}
+  if(a==="tab"){UI.tab=v;render();window.scrollTo(0,0)}
+  else if(a==="acct"){UI.acct=v;render()}
+  else if(a==="add"){entrySheet(null)}
+  else if(a==="edit"){if(canWrite)entrySheet(el.dataset.id)}
+  else if(a==="close"){closeLayer()}
+  else if(a==="seg"){FORM[el.dataset.k]=v;el.parentNode.querySelectorAll("button").forEach(function(b){b.setAttribute("aria-pressed",String(b.dataset.v===v))});if(el.dataset.k==="account"){$("#flowseg").innerHTML=flowSeg()}}
+  else if(a==="save"){saveTx()}
+  else if(a==="del"){deleteTx()}
+  else if(a==="addpay"){paySheet(null)}
+  else if(a==="editpay"){if(canWrite)paySheet(el.dataset.id)}
+  else if(a==="pseg"){PFORM.card=v;el.parentNode.querySelectorAll("button").forEach(function(b){b.setAttribute("aria-pressed",String(b.dataset.v===v))})}
+  else if(a==="psave"){savePay()}
+  else if(a==="pdel"){delPay()}
+  else if(a==="settings"){if(canWrite)settingsSheet();else toast("View only")}
+  else if(a==="ssave"){saveSettings()}
+  else if(a==="data"){dataSheet()}
+  else if(a==="export"){exportCsv()}
+  else if(a==="backup"){backupFile()}
+  else if(a==="restoreok"){applyRestore()}
+});
+document.addEventListener("change",function(ev){
+  var id=ev.target.id;
+  if(id==="period"){UI.period=ev.target.value;render()}
+  else if(id==="pfrom"){UI.from=ev.target.value;render()}
+  else if(id==="pto"){UI.to=ev.target.value;render()}
+  else if(id==="fflow"){UI.flow=ev.target.value;$("#ledgerList").innerHTML=ledgerList()}
+  else if(id==="fcat"){UI.cat=ev.target.value;$("#ledgerList").innerHTML=ledgerList()}
+  else if(id==="f-desc"&&FORM&&!$("#f-cat").value){
+    var m=all().filter(function(t){return t.desc.toLowerCase()===ev.target.value.trim().toLowerCase()}).sort(function(a,b){return a.ts<b.ts?1:-1})[0];
+    if(m)$("#f-cat").value=m.cat;
+  }
+});
+document.addEventListener("change",function(ev){if(ev.target.id==="restorefile"){readRestore(ev.target.files&&ev.target.files[0]);ev.target.value=""}});
+document.addEventListener("input",function(ev){if(ev.target.id==="q"){UI.q=ev.target.value;$("#ledgerList").innerHTML=ledgerList()}});
+document.addEventListener("keydown",function(ev){if(ev.key==="Escape")closeLayer()});
+
+/* ---------- local data layer (IndexedDB on this phone) ---------- */
+var IDB=null,mem={tx:new Map(),payments:new Map(),settings:new Map()},subs={tx:[],payments:[],settings:[]};
+function newId(){return "e"+Date.now().toString(36)+Math.random().toString(36).slice(2,6)}
+function idbOpen(){return new Promise(function(res,rej){var r=indexedDB.open("cash-card-book",1);r.onupgradeneeded=function(){var d=r.result;["tx","payments","settings","meta"].forEach(function(n){if(!d.objectStoreNames.contains(n))d.createObjectStore(n,{keyPath:"id"})})};r.onsuccess=function(){res(r.result)};r.onerror=function(){rej(r.error)}})}
+function idbTx(store,mode,fn){return new Promise(function(res,rej){var t=IDB.transaction(store,mode),st=t.objectStore(store),out=fn(st);t.oncomplete=function(){res(out&&out.result)};t.onerror=t.onabort=function(){rej(t.error)}})}
+function emit(n){subs[n].forEach(function(f){try{f()}catch(e){}})}
+function snapColl(n){var docs=Array.from(mem[n]).map(function(e){return {id:e[0],exists:true,data:function(){return e[1]}}});return {docs:docs,size:docs.length,empty:!docs.length}}
+function snapDoc(n,id){var has=mem[n].has(id);return {id:id,exists:has,data:function(){return has?mem[n].get(id):undefined}}}
+function docRef(n,id){return {id:id,
+  set:function(data){var c=JSON.parse(JSON.stringify(data));return idbTx(n,"readwrite",function(st){st.put({id:id,d:c})}).then(function(){mem[n].set(id,c);emit(n)})},
+  delete:function(){return idbTx(n,"readwrite",function(st){st.delete(id)}).then(function(){mem[n].delete(id);emit(n)})}}}
+function makeDb(){return {
+  collection:function(n){return {doc:function(id){return docRef(n,id||newId())},onSnapshot:function(cb){var f=function(){cb(snapColl(n))};subs[n].push(f);f()}}},
+  doc:function(p){var a=p.split("/"),r=docRef(a[0],a[1]);r.onSnapshot=function(cb){var f=function(){cb(snapDoc(a[0],a[1]))};subs[a[0]].push(f);f()};return r}}}
+function setSync(ok,txt){var s=$("#sync");s.className="sync"+(ok?"":" off");s.lastChild.textContent=txt}
+async function init(){
+  render();
+  try{
+    IDB=await idbOpen();
+    var names=["tx","payments","settings"];
+    for(var i=0;i<names.length;i++){var rows=await idbTx(names[i],"readonly",function(st){return st.getAll()});rows.forEach(function(r){mem[names[i]].set(r.id,r.d)})}
+    var seeded=await idbTx("meta","readonly",function(st){return st.get("seeded")});
+    
+    db=makeDb();
+  }catch(e){db=null}
+  if(!db){setSync(false,"No storage");render();return}
+  try{if(navigator.storage&&navigator.storage.persist)navigator.storage.persist()}catch(e){}
+  setSync(true,"On this phone");
+  var onErr=function(){};
+  db.collection("tx").onSnapshot(function(sn){TX.clear();sn.docs.forEach(function(d){TX.set(d.id,Object.assign({id:d.id},d.data()))});loaded.tx=true;render()},onErr);
+  db.collection("payments").onSnapshot(function(sn){PAY.clear();sn.docs.forEach(function(d){PAY.set(d.id,Object.assign({id:d.id},d.data()))});loaded.pay=true;render()},onErr);
+  db.doc("settings/main").onSnapshot(function(sn){settingsExists=sn.exists;S=Object.assign({},DEF,sn.exists?sn.data():{});loaded.set=true;render()},onErr);
+}
+if("serviceWorker" in navigator){window.addEventListener("load",function(){navigator.serviceWorker.register("sw.js").catch(function(){})})}
+init();
+})();
+</script>
+</body></html>
